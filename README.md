@@ -23,11 +23,11 @@ credit, and a laptop with a modern browser.
    limit, such as $5.** Copy the key. It starts with `sk-or-`. Treat it like a
    password.
 2. **Open a Codespace.** Pick one:
-   - **To try it:** go to **`codespaces.new/jhassell/asee9`** and click
+   - **To try it:** go to **`codespaces.new/jhassell/asee9-Dan`** and click
      **Create codespace**. This runs on the original repository. You can work,
      but you cannot save changes back to it.
    - **For your own classwork (what you want for a course):** on
-     <https://github.com/jhassell/asee9> click **Fork**, then **Create fork**.
+     <https://github.com/jhassell/asee9-Dan> click **Fork**, then **Create fork**.
      On your fork click the green **Code** button, the **Codespaces** tab, then
      **Create codespace on main**. The **first** Codespace on a new fork takes a
      few minutes to build, because it installs the agent, and you watch a build
@@ -282,7 +282,7 @@ an interactive `bash`, which reads `~/.bashrc`. The line postCreate.sh added
 there is guarded:
 
 ```
-if [ -f /workspaces/asee9/.devcontainer/autostart.sh ]; then . /workspaces/asee9/.devcontainer/autostart.sh; fi  # agentic-classroom-autostart
+if [ -f /workspaces/asee9-Dan/.devcontainer/autostart.sh ]; then . /workspaces/asee9-Dan/.devcontainer/autostart.sh; fi  # agentic-classroom-autostart
 ```
 
 The path is the repository folder, so it reads `/workspaces/<your fork's name>`
