@@ -8,7 +8,7 @@
   // end-to-end in a fresh Codespace in September 2026. Moving to openclaw
   // 2026.9.3 or later means bumping the Node feature to 24 in the same change;
   // they must move together. Test in a fresh Codespace before you rely on it.
-  "name": "asee9: agentic AI Codespace (bring your own OpenRouter key)",
+  "name": "asee9-Dan: agentic flight-software lab (bring your own OpenRouter key)",
 
   // Pinned by digest: the :3.12 tag itself moves.
   "image": "mcr.microsoft.com/devcontainers/python:3.12@sha256:7ae01dce85c08cc6b6ca411d7d7051eb100d2274ee2702120c11236692b6204f",
@@ -28,6 +28,10 @@
   // until Trust and then run in a NEW visible terminal that takes focus, hiding
   // the first terminal where setup and the agent are (measured in a real Codespace).
 
+  // postCreate.sh also runs flight-tools.sh: the C/Ada/Fortran toolchain, static
+  // and dynamic analysis, CBMC and JSBSim for flightlib/. That adds a few
+  // minutes to a build without a prebuild, mostly GNAT.
+  //
   // onCreateCommand, NOT postCreateCommand: GitHub runs onCreateCommand inside a
   // Codespaces prebuild (if you enable one) and never runs postCreateCommand
   // there. Without a prebuild it runs once, while the Codespace is created.
@@ -53,7 +57,11 @@
     "vscode": {
       "extensions": [
         "yzhang.markdown-all-in-one",
-        "mechatroner.rainbow-csv"
+        "mechatroner.rainbow-csv",
+        // flightlib/: C (IntelliSense, gdb debugging), Ada, Fortran
+        "ms-vscode.cpptools",
+        "AdaCore.ada",
+        "fortran-lang.linter-gfortran"
       ]
     }
   }

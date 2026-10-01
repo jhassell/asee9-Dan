@@ -1,0 +1,45 @@
+C=======================================================================
+C     ATMOS77 - STANDARD ATMOSPHERE, 0 TO 20 KM GEOPOTENTIAL.
+C
+C     A LEGACY-STYLE FORTRAN 77 ROUTINE OF THE KIND STILL FOUND IN OLDER
+C     SIMULATION CODE. WRITTEN FOR THIS REPOSITORY AS AN INDEPENDENT
+C     REFERENCE (AN "ORACLE") FOR src/fl_atmos.c. IT SHARES NO CODE WITH
+C     THE C VERSION.
+C
+C     INPUT   H     GEOPOTENTIAL ALTITUDE, M
+C     OUTPUT  T     TEMPERATURE, K
+C             P     PRESSURE, PA
+C             RHO   DENSITY, KG/M**3
+C             A     SPEED OF SOUND, M/S
+C             IERR  0 = OK, 1 = H OUTSIDE 0..20000 M
+C=======================================================================
+      SUBROUTINE ATMOS(H, T, P, RHO, A, IERR)
+      IMPLICIT NONE
+      DOUBLE PRECISION H, T, P, RHO, A
+      INTEGER IERR
+      DOUBLE PRECISION G0, RGAS, GAM, TSL, PSL, ALAPSE, HTP, TTP, PTP
+      PARAMETER (G0 = 9.80665D0, RGAS = 287.05287D0, GAM = 1.4D0)
+      PARAMETER (TSL = 288.15D0, PSL = 101325.0D0)
+      PARAMETER (ALAPSE = -0.0065D0, HTP = 11000.0D0)
+C
+      IERR = 0
+      IF (H .LT. 0.0D0 .OR. H .GT. 20000.0D0) THEN
+         IERR = 1
+         RETURN
+      ENDIF
+C
+C     TROPOPAUSE CONDITIONS, COMPUTED RATHER THAN TABLED
+      TTP = TSL + ALAPSE*HTP
+      PTP = PSL*(TTP/TSL)**(-G0/(ALAPSE*RGAS))
+C
+      IF (H .LE. HTP) THEN
+         T = TSL + ALAPSE*H
+         P = PSL*(T/TSL)**(-G0/(ALAPSE*RGAS))
+      ELSE
+         T = TTP
+         P = PTP*DEXP(-G0*(H - HTP)/(RGAS*TTP))
+      ENDIF
+      RHO = P/(RGAS*T)
+      A = DSQRT(GAM*RGAS*T)
+      RETURN
+      END

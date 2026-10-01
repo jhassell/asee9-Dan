@@ -1,18 +1,49 @@
-# asee9: a working AI agent in a browser tab
+# asee9-Dan: an agentic flight-software lab in a browser tab
 
-This repository gives you a working AI agent inside a GitHub Codespace: the
-agent program [OpenClaw](https://www.npmjs.com/package/openclaw), connected to
-Gemini 3.8 Flash through OpenRouter with your own key, plus short exercises, a
-folder that becomes a public website, and assignment and rubric templates. It
-is for engineering professors and their students, and nothing is installed on
-your laptop.
+Dan, this is a working AI agent set up for the kind of code you write: C,
+deterministic numerics, avionics data buses, legacy Fortran, Ada. It runs in a
+GitHub Codespace, so nothing is installed on your laptop and nothing touches
+your work machine. Open it, give it a job on the sample flight library, and
+watch what it does well and where it goes wrong.
 
-New to words like agent, harness or Codespace? Read [`PRIMER.md`](PRIMER.md)
-first. It takes ten minutes.
+It is a customized copy of [`jhassell/asee9`](https://github.com/jhassell/asee9),
+the environment from *From Chatbots to Agents*, a workshop at the ASEE Midwest
+Section conference (September 2026).
+
+> **The one rule.** Everything the agent reads is sent over the internet to
+> OpenRouter and the model's provider. **Never put proprietary code, anything
+> under NDA, or anything ITAR or EAR controlled in this Codespace, not even one
+> function.** Use the sample library in [`flightlib/`](flightlib/README.md) and
+> open-source code only. For company code, the same kind of harness has to run
+> against a model hosted inside your own network, under your company's rules.
+> This repository is not set up for that.
 
 ---
 
-## Use it in five steps
+## What an agent harness is
+
+A language model on its own only writes text. An **agent** is a model inside a
+loop that a program, the **harness**, runs for it:
+
+1. The model reads the goal and the conversation so far, and asks for a tool:
+   "run `make test`", "open `src/fl_pid.c`", "write this file".
+2. The harness carries the request out in a real shell, inside the limits it
+   sets: which folder, which commands, which credentials.
+3. The result (compiler output, test failures, file contents) goes back to the
+   model, which decides the next step.
+4. Repeat until the model says it is done.
+
+If the model is the pilot, the harness is the cockpit and the range: it decides
+which controls the pilot can reach, which instruments it sees, and it records
+the telemetry you review afterwards. Here the harness is
+[OpenClaw](https://www.npmjs.com/package/openclaw), the model is Gemini 3.8
+Flash through [OpenRouter](https://openrouter.ai), and every tool call shows on
+screen as an **Exec** card. Read those cards. They are the evidence; the
+agent's summary is a claim about them.
+
+---
+
+## Quick start
 
 You need a free GitHub account, an OpenRouter account with a few dollars of
 credit, and a laptop with a modern browser.
@@ -22,18 +53,12 @@ credit, and a laptop with a modern browser.
    (<https://openrouter.ai/settings/keys>) and create a key. **Set a credit
    limit, such as $5.** Copy the key. It starts with `sk-or-`. Treat it like a
    password.
-2. **Open a Codespace.** Pick one:
-   - **To try it:** go to **`codespaces.new/jhassell/asee9-Dan`** and click
-     **Create codespace**. This runs on the original repository. You can work,
-     but you cannot save changes back to it.
-   - **For your own classwork (what you want for a course):** on
-     <https://github.com/jhassell/asee9-Dan> click **Fork**, then **Create fork**.
-     On your fork click the green **Code** button, the **Codespaces** tab, then
-     **Create codespace on main**. The **first** Codespace on a new fork takes a
-     few minutes to build, because it installs the agent, and you watch a build
-     log while it does. Later ones are faster, and faster still if you turn on a
-     prebuild: see [Make your Codespace start
-     faster](#make-your-codespace-start-faster).
+2. **Open a Codespace.** Go to **`codespaces.new/jhassell/asee9-Dan`** and click
+   **Create codespace**. (To keep your own changes in git, first click **Fork**
+   on <https://github.com/jhassell/asee9-Dan>, then create the Codespace from
+   your fork with **Code** → **Codespaces** → **Create codespace on main**. A
+   fork's first Codespace builds for several minutes; see [Make your Codespace
+   start faster](#make-your-codespace-start-faster).)
 
    ![The Code button's Codespaces tab](docs/figures/01-code-menu.svg)
 
@@ -44,52 +69,90 @@ credit, and a laptop with a modern browser.
 
 4. **Paste the key when the terminal asks.** Setup starts by itself in the
    terminal at the bottom. The key **does not show** as you paste; that is on
-   purpose. Press Enter. The terminal starts small: enlarge it with the square
-   **Maximize Panel** button just left of the **X** at its top right.
+   purpose. Press Enter. Enlarge the terminal with the square **Maximize Panel**
+   button just left of the **X** at its top right.
 5. **The agent opens.** Setup prints **READY** and opens the agent: a bordered
    box with a cursor. Click inside the terminal and type there. Enter sends.
+   Start with:
+
+   ```
+   Build flightlib, run its tests, and tell me if it is ready to fly.
+   ```
+
+   Then follow [`exercises/flight-software.md`](exercises/flight-software.md).
+   READY also prints a **Flight simulator** address: `flightlib` running live
+   in a web page. Open it in another browser tab.
 
 **When you finish:** stop or delete the Codespace at
 <https://github.com/codespaces> (the **…** menu beside it). A stopped Codespace
 keeps your files. A deleted one is gone.
 
-If you only see a line ending in `$`, type `bash setup.sh` and press Enter.
+If you only see a line ending in `$`, type `bash setup.sh` and press Enter. If
+the agent has closed, type `openclaw chat`.
 
 ---
 
-## Try it
+## How it is customized for you
 
-**Before you add any document:** what the agent reads is sent to OpenRouter and
-the model's provider. Use only material you would be comfortable sending to an
-outside company. No student records or student work, no confidential or
-unpublished manuscripts, nothing under review, NDA or export control.
+| | What | Where |
+|---|---|---|
+| **A flight library to work on** | `flightlib/`: C99, no dynamic memory, no recursion. ISA 1976 standard atmosphere, ARINC 429 words with BNR encoding and odd parity, MIL-STD-1553B command words and mode codes, CRC-16/CCITT, a PID controller with anti-windup, a fixed-step RK4 integrator, and a closed-loop pitch-hold simulation that hashes every state bit for determinism checks. | [`flightlib/README.md`](flightlib/README.md) |
+| **Requirements and tests** | 27 "shall" statements with IDs (FL-ATM-002, FL-1553-005, ...) and a unit-test suite whose tests name the requirements they cover. Ready for traceability questions. | [`flightlib/docs/SPEC.md`](flightlib/docs/SPEC.md) |
+| **A legacy oracle** | A Fortran 77 standard-atmosphere routine that shares no code with the C, as an independent reference. | `flightlib/legacy/` |
+| **A live web simulator** | `flightlib` compiled to WebAssembly and running in a browser page: attitude indicator, strip chart, pitch command and gain controls. Setup installs it in `site/sim/`, which is public on port 8000 while the Codespace runs, so you can send someone the link. The agent can extend it or build new ones. | [`flightlib/web/`](flightlib/web/), `make -C flightlib web` |
+| **Real flight dynamics** | [JSBSim](https://github.com/JSBSim-Team/jsbsim) 1.3.1 with its bundled aircraft (Cessna 172, 737, F-16, ...) and a starter script that trims and flies the 172. | `flightlib/tools/jsbsim_hello.py` |
+| **Compilers** | GCC 14 and clang 19 (C/C++, and C to WebAssembly with wasi-libc, binaryen and wabt), GNAT 14 with gprbuild (Ada 2012), gfortran 14. | `.devcontainer/flight-tools.sh` |
+| **Static analysis** | cppcheck 2.17 with its MISRA C:2012 addon, clang-tidy, clang-format. | `make analyze` |
+| **Dynamic analysis and coverage** | AddressSanitizer + UBSan, valgrind, gdb, gcov/gcovr and lcov. | `make sanitize`, `make valgrind`, `make coverage` |
+| **Formal verification** | [CBMC](https://www.cprover.org/cbmc/), a bounded model checker for C: it proves a property for every input, not a sample. | `cbmc` |
+| **Python for engineering** | numpy, scipy, sympy, pandas, matplotlib, pytest, hypothesis. | |
+| **Editor support** | VS Code extensions for C/C++ (IntelliSense and gdb debugging), Ada & SPARK, and Modern Fortran. | `.devcontainer/devcontainer.json` |
+| **An agent briefed for this work** | Its standing rules: never claim a test passed without running it and naming the command; never weaken a test to make it pass; keep `flightlib/` to its conventions; say where every number came from; stop if anyone offers proprietary or export-controlled code. | `setup.sh` (writes `~/.openclaw/workspace/IDENTITY.md`) |
+| **Exercises** | One goal, five moves, then a menu of experiments. | [`exercises/flight-software.md`](exercises/flight-software.md) |
 
-### The three typed lines, on your own files
+---
 
-Drag a few of your own documents (published papers, a syllabus, public course
-pages) onto the `mine/` folder in the file list (setup creates `mine/` just
-before READY; it is gitignored, so nothing in it is ever committed).
-Then follow [`exercises/hands-on.md`](exercises/hands-on.md): you type a goal,
-a check and a rule, and watch where the agent does something other than what
-you meant. A check line in that style:
+## Things to try
 
-```
-Which claims come from no file in mine?
-```
+Type each line into the agent. Details, and what to watch for, are in
+[`exercises/flight-software.md`](exercises/flight-software.md).
 
-### A small website
+| Try | Type |
+|---|---|
+| **The Intent Gap** | `Build flightlib, run its tests, and tell me if it is ready to fly.` |
+| **The web simulator** | Open the *Flight simulator* address READY printed. Then: `Add an airspeed tape and an altitude readout to site/sim, driven by the C model.` |
+| Requirements traceability | `Which requirements in flightlib/docs/SPEC.md does no test fully cover?` |
+| Give it a rule | `New rule: a requirement is met only if a test you ran proves it. Add the missing tests.` |
+| An independent oracle | `Compare fl_atmos against legacy/atmos77.f every 100 m from 0 to 20 km.` |
+| A formal proof | `Use cbmc to prove fl_a429_pack always produces odd parity.` |
+| A mirror test | `Run sim_pitch at +15 and -15 degrees. Should the responses mirror? Explain any difference.` |
+| MISRA triage | `Run make analyze in flightlib and sort every finding: real defect, MISRA deviation, or noise.` |
+| Determinism | `Is sim_pitch bit-identical between gcc and clang, at -O0 and -O2? Prove it with hashes.` |
+| Ada with contracts | `Port fl_crc16 to Ada 2012 with Pre and Post contracts, and check it against the C on 100000 random inputs.` |
+| A real 6-DOF model | `Using flightlib/tools/jsbsim_hello.py as a start, fly the c172x through a 2-second elevator doublet and plot pitch rate.` |
 
-Follow [`exercises/site-tutor.md`](exercises/site-tutor.md). The agent builds a
-teaching site in `site/`, then you check its facts. For example:
+When you have done a few, read **The challenge** at the end of the exercise
+sheet.
 
-```
-Build site/ teaching beam deflection basics.
-```
+**What it costs.** Roughly $0.10-0.50 of OpenRouter credit per task on Gemini
+3.8 Flash; longer tasks cost more. Spend per key is at
+<https://openrouter.ai/activity>. Codespaces time comes from your GitHub
+account's free monthly allowance. To try a different model, add a Codespaces
+secret named `OPENCLAW_MODEL` with an OpenRouter model id that supports tool
+calling (format `openrouter/<provider>/<model>`); only Gemini 3.8 Flash was
+tested here.
 
-Each step the agent takes shows as an **Exec** card above its reply: the files it
-opened and the commands it ran. Check those, not its summary.
+---
 
-All exercises and templates: [`exercises/README.md`](exercises/README.md).
+## What the agent can reach
+
+The agent runs as you inside the Codespace and can read any file you can. Setup
+starts it with `OPENROUTER_API_KEY`, `NETLIFY_AUTH_TOKEN`, `NETLIFY_SITE_ID` and
+the Codespace's GitHub token removed from its environment, so it cannot push to
+GitHub or publish a website. It can still read `~/.openclaw/openclaw.json`,
+which holds your OpenRouter key; it is told not to, but a rule is not a wall.
+The credit limit on the key is the wall. It can reach the public internet, so
+it can clone open-source code and read public documentation.
 
 ---
 
@@ -174,56 +237,6 @@ saved token and stops without publishing (run the script again to publish).
 
 ---
 
-## Using it with students
-
-- **Each student forks** this repository (or your adapted fork) and creates their
-  own Codespace. The Codespace time comes out of each student's own GitHub
-  allowance, not yours.
-- **Keys, two options.**
-  - *Each student uses their own OpenRouter key* with a small credit limit.
-  - *You issue each student a separate key* from your OpenRouter account, each
-    with its own small limit (for example $2-5). **Never give a class one shared
-    key:** one runaway agent would spend everyone's budget, and you could not
-    tell who did.
-- **Codespaces secrets save typing.** A student adds a secret named
-  `OPENROUTER_API_KEY` at github.com → **Settings** → **Codespaces** →
-  **Secrets**, with **Repository access** set to their fork, *before* creating
-  the Codespace. Setup then uses it and asks nothing. Pasting at the prompt also
-  works. An optional secret `OPENCLAW_MODEL` picks a different model.
-- **Cost.** Roughly $0.10-0.50 of OpenRouter credit per agent task on Gemini 3.8
-  Flash (a few minutes of the agent reading files and writing a result). Longer
-  tasks cost more. Prices change. Each key's spend is at
-  <https://openrouter.ai/activity>. Avoid models whose names end in `:free`: they
-  are rate-limited per account and an agent hits the limit quickly.
-- **Codespaces quota.** Personal GitHub accounts get a free monthly allowance of
-  Codespaces compute, counted in core-hours, plus storage. A 4-core machine uses
-  the hours twice as fast as a 2-core one. Stopped Codespaces still use storage.
-  Check GitHub's current allowance and your usage at
-  <https://github.com/settings/billing>.
-- **Rules to give students:** what documents may be given to the agent (above),
-  that `site/` is public while the Codespace runs, and that the agent never
-  publishes.
-- **Templates:** [`starter-assignment.md`](exercises/starter-assignment.md)
-  (delegate, verify, document), [`starter-build-agent.md`](exercises/starter-build-agent.md)
-  (students build a small agent), [`rubric-template.md`](exercises/rubric-template.md),
-  and [`what-went-wrong.md`](exercises/what-went-wrong.md), a candid list from
-  the course this came from.
-- Forks do not update themselves when you change your copy. Settle your version
-  before the term starts.
-
-**What the agent can reach.** The agent runs as you inside the Codespace, so it
-can read any file you can. Setup does what it can about that: it starts the
-agent with `OPENROUTER_API_KEY`, `NETLIFY_AUTH_TOKEN`, `NETLIFY_SITE_ID` and the
-Codespace's GitHub token removed from its environment, so a stray
-`bash publish-site.sh --yes` finds no token and `gh` finds no login. What it
-cannot do is hide the files: `~/.openclaw/openclaw.json` holds the key and
-`~/.config/netlify/token` holds the Netlify token if you saved it. The agent is
-told never to read or print either, but a rule is not a wall. The credit limit
-on the key is the wall. If the Netlify token matters more than the convenience,
-paste it when you publish and answer *no* to saving it.
-
----
-
 ## Troubleshooting
 
 | What you see | What to do |
@@ -240,6 +253,8 @@ paste it when you publish and answer *no* to saving it.
 | Ctrl+C does not stop the agent | That is expected. Let it finish. If it is stuck for many minutes, close that terminal (trash-can icon), open a new one (**+**), type `openclaw chat`. |
 | The terminal shrank when you opened a file | Click the square **Maximize Panel** button just left of the **X**. |
 | No terminal at all | The **+** on the terminal panel. If the panel is gone: the **☰** menu at the top left → **Terminal** → **New Terminal**. |
+| **"Flight-software tools missing"** at setup, or `cppcheck`, `gnatmake`, `cbmc` not found | In a second terminal: `bash .devcontainer/flight-tools.sh` (a few minutes; it needs the internet). It reports anything still missing by name. |
+| `make` in `flightlib` fails with "No such file" | Run it from the `flightlib/` folder, or as `make -C flightlib test` from the top. |
 | Anything else | Delete the Codespace and create a fresh one. A fresh container is the first diagnostic step. |
 
 ![The ☰ menu, Terminal, New Terminal](docs/screenshots/F-menu-terminal-new-terminal.png)
@@ -405,6 +420,8 @@ Everything is pinned. Where each pin lives:
 | pandas, matplotlib | `3.0.5`, `3.11.1` | `postCreate.sh`, `setup.sh` |
 | markdown, jinja2, requests, beautifulsoup4, feedparser | `3.10.3`, `3.1.6`, `2.34.2`, `4.15.0`, `6.0.14` | `postCreate.sh`, `setup.sh` |
 | Default model | `openrouter/google/gemini-3.8-flash` | `setup.sh`; override with `OPENCLAW_MODEL` |
+| numpy, scipy, sympy, pytest, hypothesis, gcovr, jsbsim | `2.5.3`, `1.18.1`, `1.14.0`, `9.1.1`, `6.168.3`, `8.6`, `1.3.1` | `flight-tools.sh` |
+| Debian toolchain (GCC, clang, GNAT, gfortran, cppcheck, CBMC, valgrind, gdb, ...) | whatever Debian 13 (trixie) ships; not pinned per package (see below) | `flight-tools.sh` |
 
 **Why everything is pinned.** On 2026-09-08, `npm install -g openclaw@latest`
 started pulling OpenClaw 2026.9.3. That release raised its Node requirement to
@@ -422,6 +439,13 @@ needs the Node feature at version 24 in the same change.
 3. Read the creation log for `GATE PASSED`.
 4. Run setup, run one exercise end to end, publish a test site.
 5. Merge only after that works. Then delete the test Codespace.
+
+**The Debian packages are the one exception.** Debian point releases replace
+old package versions in its archive, so an exact `apt-get install pkg=version`
+pin would eventually fail outright. They are held in place by the base image
+digest (Debian 13, trixie) instead: in September 2026 that meant GCC 14, clang
+19, cppcheck 2.17, GNAT 14, CBMC 6.6, valgrind 3.24 and gdb 16. The GATE checks
+that the core tools exist, not their exact versions.
 
 ### d. Using OpenRouter
 
@@ -556,6 +580,32 @@ explained in plain words: 401/403 (token refused), 404 (wrong site id), 422
 
 ---
 
+### h. The flight-software lab (asee9-Dan)
+
+What this copy adds to asee9, and where:
+
+- **`.devcontainer/flight-tools.sh`** installs the toolchain: apt packages for
+  C, Ada, Fortran, analysis and CBMC, then pinned Python packages. `postCreate.sh`
+  runs it during creation (inside the prebuild, if there is one). Its GATE fails
+  the build if gcc, clang, cppcheck, clang-tidy, gfortran or numpy/scipy/jsbsim
+  is missing, and only warns for gdb, valgrind, GNAT, gprbuild, CBMC, lcov and
+  cmake, so one missing extra cannot take the prebuild down. Run it again by hand
+  to repair a Codespace.
+- **`setup.sh`** reports missing flight tools before it asks for the key, writes
+  the agent's code-work rules into `IDENTITY.md`, and points at `flightlib/` and
+  the exercise sheet at READY.
+- **`flightlib/`** is self-contained: a `Makefile`, its own 50-line test harness
+  (nothing to install or pin), and output in `flightlib/build/`, which git
+  ignores.
+- **`devcontainer.json`** adds the C/C++, Ada & SPARK and Modern Fortran
+  extensions.
+- **`flightlib/web/`** is the browser simulator. `make -C flightlib web` builds
+  it with clang's `wasm32-wasi` target (Debian's `wasi-libc` and
+  `libclang-rt-19-dev-wasm32`, linked by `wasm-ld` from `lld`) and copies it to
+  `site/sim/`. `setup.sh` runs it once, before READY, if `site/sim/` does not
+  exist yet. If the WebAssembly build fails, the page still installs and runs a
+  JavaScript port of the same code.
+
 ## Make your Codespace start faster
 
 - **Enable a prebuild on your fork.** Forks do **not** inherit the original
@@ -603,7 +653,9 @@ Hands-On Workshop on Teaching with Agentic AI*, by John Hassell, OU Polytechnic
 Institute. At the workshop it was used with a private reading set that is not
 included here. The environment was tested in fresh Codespaces and reviewed by
 colleagues and several AI systems before release. No endorsement by ASEE is
-implied.
+implied. The flight-software customization (`flightlib/`, the toolchain and the
+exercise sheet) was added in September 2026 for Dan at Simstar. `flightlib` is a
+teaching sample written for this repository, not code from any company.
 
 ## License
 

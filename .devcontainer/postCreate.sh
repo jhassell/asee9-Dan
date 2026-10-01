@@ -45,6 +45,12 @@ else
   echo "Site tools did not install here; setup.sh will install them."
 fi
 
+# Flight-software toolchain for flightlib/ (asee9-Dan): C, Ada, Fortran, static
+# and dynamic analysis, CBMC, JSBSim. Its own script, so it can be re-run by
+# hand to repair a missing tool. It needs sudo for apt; the base image gives the
+# vscode user passwordless sudo.
+bash "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/flight-tools.sh"
+
 # AUTOSTART. One guarded line in ~/.bashrc sources .devcontainer/autostart.sh,
 # which starts setup.sh by itself in the first terminal you open. It does
 # nothing here: there is no interactive VS Code terminal yet. Idempotent, and it
@@ -89,11 +95,25 @@ python3 -c 'import markdown, jinja2, requests, bs4, feedparser' 2>/dev/null \
   || { echo "GATE FAILED: site tools do not import"; FAIL=1; }
 gh --version 2>/dev/null | grep -qF "2.100.0" \
   || { echo "GATE FAILED: gh 2.100.0 is not installed (port 8000 cannot go public)"; FAIL=1; }
+# The flight-software core: what exercises/flight-software.md cannot start
+# without. Everything else flight-tools.sh installs (gdb, valgrind, GNAT, CBMC,
+# ...) only warns, so one missing extra cannot make "Prebuild ready" vanish.
+FLIGHT_FAIL=
+for t in gcc clang cppcheck clang-tidy gfortran; do
+  command -v "$t" >/dev/null 2>&1 \
+    || { echo "GATE FAILED: $t is not installed"; FAIL=1; FLIGHT_FAIL=1; }
+done
+python3 -c 'import numpy, scipy, jsbsim' 2>/dev/null \
+  || { echo "GATE FAILED: numpy/scipy/jsbsim do not import"; FAIL=1; FLIGHT_FAIL=1; }
+for t in gdb valgrind gnatmake gprbuild cbmc lcov cmake wasm-ld; do
+  command -v "$t" >/dev/null 2>&1 || echo "WARNING: $t is not installed (bash .devcontainer/flight-tools.sh)"
+done
 if [ -n "$FAIL" ]; then
   echo "Tooling incomplete. In the Codespace, bash setup.sh repairs it."
+  [ -n "$FLIGHT_FAIL" ] && echo "Flight-software tools: bash .devcontainer/flight-tools.sh repairs them."
   exit 1
 fi
-echo "GATE PASSED: openclaw ${OPENCLAW_VERSION}, pandas, matplotlib, site tools, gh"
+echo "GATE PASSED: openclaw ${OPENCLAW_VERSION}, pandas, matplotlib, site tools, gh, flight-software core"
 
 echo ""
 echo "=============================================="

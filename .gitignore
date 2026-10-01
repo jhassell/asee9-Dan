@@ -16,3 +16,7 @@ my-openrouter.key
 # Junk
 __pycache__/
 .DS_Store
+
+# flightlib build output
+flightlib/build/
+flightlib/JSBout*.csv

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pitch Hold Simulator</title>
+<meta name="description" content="A live pitch-attitude-hold simulation running flightlib's C code in the browser through WebAssembly.">
+<style>
+  :root {
+    --bg: #f6f7f9; --panel: #ffffff; --ink: #1b1f24; --muted: #5b6470;
+    --line: #d9dde3; --accent: #0b63ce; --cmd: #c2410c; --elev: #6d28d9;
+    --sky: #4a90d9; --ground: #8b5a2b; --ok: #15803d; --warn: #b45309;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0f1216; --panel: #171b21; --ink: #e6e9ee; --muted: #9aa4b2;
+      --line: #2a313a; --accent: #5aa2ff; --cmd: #fb923c; --elev: #a78bfa;
+      --sky: #2f6fb3; --ground: #6b4423; --ok: #4ade80; --warn: #fbbf24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0f1216; --panel: #171b21; --ink: #e6e9ee; --muted: #9aa4b2;
+    --line: #2a313a; --accent: #5aa2ff; --cmd: #fb923c; --elev: #a78bfa;
+    --sky: #2f6fb3; --ground: #6b4423; --ok: #4ade80; --warn: #fbbf24;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; }
+  h1 { font-size: 1.4rem; margin: 0 0 4px; }
+  .sub { color: var(--muted); margin: 0 0 16px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 999px;
+           border: 1px solid var(--line); font-size: 0.85rem; }
+  .badge.c { color: var(--ok); border-color: var(--ok); }
+  .badge.js { color: var(--warn); border-color: var(--warn); }
+  .grid { display: grid; grid-template-columns: 320px 1fr; gap: 16px; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line);
+           border-radius: 10px; padding: 14px; }
+  canvas { width: 100%; display: block; border-radius: 8px; }
+  #horizon { aspect-ratio: 1 / 1; }
+  #chart { aspect-ratio: 16 / 9; }
+  .readouts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+              margin-top: 12px; font-variant-numeric: tabular-nums; }
+  .readouts div { border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; }
+  .readouts b { display: block; font-size: 1.05rem; }
+  .readouts span { color: var(--muted); font-size: 0.78rem; }
+  .controls { display: grid; gap: 10px; margin-top: 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  label { color: var(--muted); font-size: 0.85rem; }
+  input[type=range] { flex: 1; min-width: 160px; }
+  input[type=number] { width: 72px; padding: 4px 6px; border: 1px solid var(--line);
+                       border-radius: 6px; background: var(--bg); color: var(--ink); }
+  button { padding: 6px 12px; border-radius: 6px; border: 1px solid var(--line);
+           background: var(--bg); color: var(--ink); cursor: pointer; font: inherit; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .legend { display: flex; gap: 14px; font-size: 0.82rem; color: var(--muted); margin: 6px 0 0; }
+  .legend i { display: inline-block; width: 14px; height: 3px; vertical-align: middle; margin-right: 5px; }
+  footer { color: var(--muted); font-size: 0.82rem; margin-top: 18px; }
+  code { font-size: 0.9em; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Pitch Hold Simulator</h1>
+  <p class="sub">PID pitch-attitude hold on a linear short-period model, fixed step, in real time.
+    Engine: <span id="engine" class="badge">loading…</span></p>
+
+  <div class="grid">
+    <section class="panel">
+      <canvas id="horizon" width="600" height="600" aria-label="Attitude indicator"></canvas>
+      <div class="readouts">
+        <div><span>time</span><b id="r-t">0.0 s</b></div>
+        <div><span>pitch θ</span><b id="r-theta">0.00°</b></div>
+        <div><span>command</span><b id="r-cmd">0.0°</b></div>
+        <div><span>pitch rate q</span><b id="r-q">0.00°/s</b></div>
+        <div><span>alpha α</span><b id="r-alpha">0.00°</b></div>
+        <div><span>elevator</span><b id="r-de">0.00°</b></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <canvas id="chart" width="1200" height="675" aria-label="Strip chart"></canvas>
+      <p class="legend">
+        <span><i style="background:var(--cmd)"></i>command</span>
+        <span><i style="background:var(--accent)"></i>pitch θ</span>
+        <span><i style="background:var(--elev)"></i>elevator</span>
+      </p>
+      <div class="controls">
+        <div class="row">
+          <label for="cmd">Pitch command</label>
+          <input id="cmd" type="range" min="-30" max="30" step="0.5" value="0">
+          <b id="cmd-val">0.0°</b>
+        </div>
+        <div class="row">
+          <button data-step="15">Step +15°</button>
+          <button data-step="-15">Step −15°</button>
+          <button data-step="30">Step +30°</button>
+          <button data-step="-30">Step −30°</button>
+          <button data-step="0">Level</button>
+        </div>
+        <div class="row">
+          <label>Kp <input id="kp" type="number" step="0.1" value="4.0"></label>
+          <label>Ki <input id="ki" type="number" step="0.1" value="2.0"></label>
+          <label>Kd <input id="kd" type="number" step="0.1" value="1.2"></label>
+          <label>Speed <select id="speed"><option>1</option><option>2</option><option>4</option></select>×</label>
+        </div>
+        <div class="row">
+          <button id="reset" class="primary">Reset</button>
+          <button id="pause">Pause</button>
+          <button id="theme">Light / dark</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <footer>
+    100 Hz fixed step, elevator limit ±20°. The model's coefficients are illustrative, not data for a
+    real aircraft. Built from <code>flightlib/web/</code> by <code>make web</code>; with the
+    WebAssembly engine, the page runs the same C code as <code>flightlib</code>'s unit tests.
+  </footer>
+</main>
+<script src="sim.js"></script>
+</body>
+</html>

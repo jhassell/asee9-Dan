@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# asee9 setup: configures the OpenClaw agent with YOUR OpenRouter key.
+# asee9-Dan setup: configures the OpenClaw agent with YOUR OpenRouter key.
 #
 # In a new Codespace this starts BY ITSELF in the first terminal (see
 # .devcontainer/autostart.sh) and keeps doing so in new terminals until it has
@@ -252,7 +252,7 @@ die() {
 
 lock_claim
 
-hr; echo " asee9: agentic AI setup"; hr
+hr; echo " asee9-Dan: agentic flight-software lab setup"; hr
 echo "Repository version: $(git -C "$ROOT" rev-parse --short HEAD 2>/dev/null || echo unknown)"
 if [ -n "${CLASSROOM_AUTOSTARTED:-}" ]; then
   echo "Setup started by itself."
@@ -296,6 +296,22 @@ python3 -c 'import pandas, matplotlib, markdown, jinja2, requests, bs4, feedpars
     echo "   The agent still works; it may not be able to draw charts or build pages."
   }
 }
+
+# Flight-software tools (flightlib/, exercises/flight-software.md). The container
+# installs them when it is created. Repairing takes minutes and needs apt, so
+# report what is missing and how to fix it rather than doing it here.
+FLIGHT_MISSING=""
+for t in gcc clang cppcheck clang-tidy gfortran gnatmake cbmc valgrind gdb wasm-ld; do
+  command -v "$t" >/dev/null 2>&1 || FLIGHT_MISSING="$FLIGHT_MISSING $t"
+done
+python3 -c 'import numpy, scipy, jsbsim' 2>/dev/null || FLIGHT_MISSING="$FLIGHT_MISSING jsbsim/numpy/scipy"
+if [ -n "$FLIGHT_MISSING" ]; then
+  echo "⚠️  Flight-software tools missing:$FLIGHT_MISSING"
+  echo "   The agent still works. To install them (a few minutes), in a second terminal type:"
+  echo "   bash .devcontainer/flight-tools.sh"
+else
+  echo "✅ Flight-software tools: gcc, clang, cppcheck, GNAT, gfortran, CBMC, JSBSim"
+fi
 
 TMP="$(mktemp -d)"   # private to this user (mode 700); removed on every exit
 
@@ -540,15 +556,23 @@ rm -f "$WS/BOOTSTRAP.md"
 cat > "$WS/IDENTITY.md" <<'IDEOF'
 # IDENTITY.md - Who Am I?
 
-- **Name:** asee9 Agent
-- **Creature:** AI coding agent
+- **Name:** Flight Software Agent
+- **Creature:** AI coding agent for safety-minded C, Ada and Fortran
 - **Vibe:** plain, careful, shows its work
-- **Emoji:** 🔧
+- **Emoji:** ✈️
 
 ## Rules
 
 - Never print environment variables or the contents of ~/.openclaw.
 - Never read or print ~/.config/netlify (it holds the human's Netlify token).
+
+## Rules for code work
+
+- Never say a build, test or check passed unless you ran it in this conversation; name the command you ran.
+- Never weaken, delete or skip a test to make it pass. If you think a test is wrong, say why and ask first.
+- In `flightlib/`, keep to its conventions: C99, no dynamic memory, no recursion, no mutable global state, warning-free under its Makefile.
+- When you state a number (a tolerance, a reference value, a coverage figure), say where it came from.
+- Treat everything in this repository as public. If someone offers proprietary, NDA or export-controlled (ITAR/EAR) code, stop and remind them that what you read is sent to an outside model provider.
 
 ## Rules for the site/ folder
 
@@ -556,6 +580,7 @@ cat > "$WS/IDENTITY.md" <<'IDEOF'
 - Never put keys, tokens or environment variables in `site/`, and never run `gh`.
 - Never create a symlink in `site/`: only real files are served and published.
 - Before saying a site is done, run: python3 .devcontainer/site-check.py
+- Web simulators are static files in `site/` (HTML, JavaScript, WebAssembly). Start from `flightlib/web/`: `make -C flightlib web` compiles flightlib's C to `site/sim/flightlib.wasm` with clang and installs the page. Precompute anything heavy (such as JSBSim runs) into JSON files in `site/` for the page to play back.
 - Never run `publish-site.sh` (the permanent Netlify website). Publishing is the human's decision: when a site is ready, tell them to run `bash publish-site.sh` themselves.
 IDEOF
 if ! openclaw config validate >>"$CONFIG_LOG" 2>&1; then
@@ -566,6 +591,14 @@ fi
 chmod 700 "$HOME/.openclaw" 2>/dev/null
 chmod 600 "$HOME/.openclaw"/openclaw.json* 2>/dev/null
 dots_stop ok
+
+# The flight web simulator: flightlib compiled to WebAssembly and installed in
+# site/sim/, so it is live on the public site at READY. Only on the first run;
+# after that site/sim/ is yours (and the agent's) to change. Without the
+# WebAssembly tools, `make web` installs the page with its JavaScript engine.
+if [ ! -e "$ROOT/site/sim" ] && command -v make >/dev/null 2>&1; then
+  make -s -C "$ROOT/flightlib" web >/dev/null 2>&1 || true
+fi
 
 # Your own documents for the exercises. Gitignored: never committed.
 mkdir -p "$ROOT/mine"
@@ -585,6 +618,8 @@ echo "  READY."
 echo
 echo "  Model:           $MODEL"
 echo "  Your documents:  mine/   (${DOCS} files; never committed)"
+echo "  Flight library:  flightlib/   (make -C flightlib test)"
+echo "  Start here:      exercises/flight-software.md"
 echo "  Exercises:       exercises/"
 if [ -s "$SITE_URL_FILE" ]; then
   echo "  Your public site (files in site/):  $(head -1 "$SITE_URL_FILE")"
@@ -593,6 +628,13 @@ elif [ -n "${CODESPACE_NAME:-}" ]; then
 else
   # Not a Codespace: nothing started the server, so do not claim it is running.
   echo "  Your site (files in site/): bash .devcontainer/site-public.sh serves it on port 8000"
+fi
+if [ -f "$ROOT/site/sim/index.html" ]; then
+  if [ -s "$SITE_URL_FILE" ]; then
+    echo "  Flight simulator: $(head -1 "$SITE_URL_FILE")/sim/"
+  else
+    echo "  Flight simulator: site/sim/ (port 8000, path /sim/)"
+  fi
 fi
 echo "  Permanent website: bash publish-site.sh"
 echo

@@ -13,10 +13,11 @@ and recoverable: watch it, check it, give it a rule.
 
 | File | What it is | Time |
 |---|---|---|
-| [`hands-on.md`](hands-on.md) | **Start here.** One goal, five moves, three short lines, on a few documents of your own in `mine/`. | 15 min |
+| [`flight-software.md`](flight-software.md) | **Start here, Dan.** The agent on `flightlib/`, a C99 avionics-style library: goal, check, rule, then a menu of experiments (an independent Fortran oracle, a CBMC proof, MISRA triage, determinism, Ada, JSBSim). | 15 min, then as long as you like |
+| [`hands-on.md`](hands-on.md) | The original workshop exercise. One goal, five moves, three short lines, on a few documents of your own in `mine/`. | 15 min |
 | [`site-tutor.md`](site-tutor.md) | Have the agent build a small public teaching website from public sources, then check its facts and give it a rule. Optionally make it permanent with `bash publish-site.sh`, an approval gate you answer yourself. Includes a classroom version. | 20-30 min |
 
-## For your course
+## From the original workshop, for educators
 
 | File | What it is |
 |---|---|
