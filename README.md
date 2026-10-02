@@ -654,7 +654,7 @@ Institute. At the workshop it was used with a private reading set that is not
 included here. The environment was tested in fresh Codespaces and reviewed by
 colleagues and several AI systems before release. No endorsement by ASEE is
 implied. The flight-software customization (`flightlib/`, the toolchain and the
-exercise sheet) was added in September 2026 for Dan at Simstar. `flightlib` is a
+exercise sheet) was added in September 2026 for Dan Hoar at CymSTAR. `flightlib` is a
 teaching sample written for this repository, not code from any company.
 
 ## License
